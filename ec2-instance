@@ -1,0 +1,299 @@
+=======================================================================================================================================
+                                                          # INSTANCES  #
+=======================================================================================================================================
+
+What it is: Page to manage all running/stopped EC2 instances.
+
+Hands-on Steps:
+
+Select your instance.
+
+Actions → Start/Stop/Terminate.
+
+Check Monitoring tab for CPU utilization.
+
+Instances — Manage EC2 Instances (Console + CLI)
+Prerequisites
+
+IAM permissions: ec2:Describe*, ec2:StartInstances, ec2:StopInstances, ec2:TerminateInstances, cloudwatch:* (as needed).
+
+Pick the correct Region (top-right of console).
+
+A) Open & Understand the Instances Page
+
+Sign in to AWS Console → EC2.
+
+Left menu → Instances → Instances.
+
+Use the search bar or filters (State, AZ, Tags, Instance type).
+
+Click an instance row → the details pane opens.
+
+Details tab: IDs, AMI, instance type, IAM role, AZ, platform (Linux/Windows).
+
+Security tab: Security groups, inbound/outbound rules.
+
+Networking tab: Public/Private IP, ENIs, Elastic IPs.
+
+Storage tab: Root & data volumes (EBS), device names.
+
+Status checks tab: System/Instance checks & history.
+
+Monitoring tab: CloudWatch metrics (CPU, network, disk).
+
+B) Start an Instance (Stopped → Running)
+
+Console
+
+Select a stopped instance (State = stopped).
+
+Instance state → Start instance → Confirm.
+
+Wait until State = running. (Public IP may change unless using an Elastic IP.)
+
+(Optional) Test connectivity (SSH/RDP/HTTP).
+
+CLI
+
+aws ec2 start-instances --instance-ids i-0123456789abcdef0
+aws ec2 wait instance-running --instance-ids i-0123456789abcdef0
+aws ec2 describe-instances --instance-ids i-0123456789abcdef0 --query "Reservations[].Instances[].PublicIpAddress"
+
+
+Note: Starting resumes billing for instance + attached EBS volumes.
+
+C) Stop an Instance (Running → Stopped)
+
+When to stop: Maintenance, change instance type/volume size, or to save instance-hours (EBS still bills).
+
+Console
+
+Select a running instance.
+
+Instance state → Stop instance → Confirm.
+
+Wait until State = stopped.
+
+CLI
+
+aws ec2 stop-instances --instance-ids i-0123456789abcdef0
+aws ec2 wait instance-stopped --instance-ids i-0123456789abcdef0
+
+
+Important
+
+Public IPv4 changes on next start (unless using an Elastic IP).
+
+Instance store (ephemeral) disks are wiped on stop. EBS persists.
+
+If Hibernate is enabled and supported, memory state is saved to EBS (extra charges/limits apply).
+
+D) Reboot an Instance
+
+Console: Select instance → Instance state → Reboot instance → Confirm.
+CLI:
+
+aws ec2 reboot-instances --instance-ids i-0123456789abcdef0
+
+
+Reboot ≠ stop/start: public IP stays the same, EBS remains attached.
+
+E) Terminate an Instance (Permanently Delete)
+
+Before terminating
+
+Backup data: Create AMI or take EBS snapshots.
+
+Check Termination protection (may need to disable).
+
+Know that the root volume may be deleted (default: Delete on termination = true).
+
+Console
+
+Select instance.
+
+Instance state → Terminate instance → Confirm.
+
+CLI
+
+aws ec2 terminate-instances --instance-ids i-0123456789abcdef0
+aws ec2 wait instance-terminated --instance-ids i-0123456789abcdef0
+
+
+Irreversible. Data on instance store is lost. EBS with “DeleteOnTermination=true” is also deleted.
+
+F) Connect to Your Instance
+Linux (SSH)
+
+Console (quick): Select instance → Connect → EC2 Instance Connect (works for Amazon Linux/Ubuntu with EIC enabled + IAM).
+SSH:
+
+chmod 400 my-key.pem
+ssh -i my-key.pem ec2-user@<PublicIPv4-or-EIP>
+# Ubuntu images often use 'ubuntu' user instead of 'ec2-user'
+
+Windows (RDP)
+
+Select instance → Connect → RDP client.
+
+Get Password → upload the .pem key → decrypt Administrator password.
+
+RDP to <PublicIPv4-or-EIP>:3389.
+
+Session Manager (No SSH/RDP ports)
+
+Attach IAM role with SSM permissions; install SSM Agent (Amazon Linux/Windows AMIs have it).
+
+Console: Select instance → Connect → Session Manager → Connect.
+
+CLI (SSM)
+
+aws ssm start-session --target i-0123456789abcdef0
+
+G) View CPU & Create Alarms (Monitoring)
+
+View CPU Utilization
+
+Select instance → Monitoring tab.
+
+See CPUUtilization, NetworkIn/Out, DiskRead/Write (5-min metrics by default).
+
+(Optional) Enable detailed monitoring (1-min granularity; extra cost):
+Actions → Monitor and troubleshoot → Manage detailed monitoring → Enable.
+
+Create a CPU Alarm (Example: CPU > 70% for 5 mins)
+
+Monitoring tab → View in metrics → opens CloudWatch.
+
+All metrics → EC2 per-Instance Metrics → CPUUtilization for your instance.
+
+Select metric → Create alarm → Threshold > 70 → Period 1 minute → Datapoints to alarm 5/5.
+
+Choose notification (create/select SNS topic) → Create alarm.
+
+CLI (alarm example)
+
+aws cloudwatch put-metric-alarm \
+  --alarm-name "HighCPU-i-0123456789abcdef0" \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --statistic Average \
+  --period 60 \
+  --threshold 70 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions Name=InstanceId,Value=i-0123456789abcdef0 \
+  --evaluation-periods 5 \
+  --alarm-actions arn:aws:sns:ap-south-1:123456789012:alerts \
+  --unit Percent
+
+H) Change Instance Type (Scale Up/Down)
+
+Requires Stop (for EBS-backed instances).
+
+Console
+
+Stop the instance.
+
+Actions → Instance settings → Change instance type.
+
+Choose new type (e.g., t3.small → t3.medium) → Apply.
+
+Start the instance; validate app.
+
+CLI
+
+aws ec2 stop-instances --instance-ids i-0123456789abcdef0
+aws ec2 wait instance-stopped --instance-ids i-0123456789abcdef0
+aws ec2 modify-instance-attribute --instance-id i-0123456789abcdef0 --instance-type "{\"Value\":\"t3.medium\"}"
+aws ec2 start-instances --instance-ids i-0123456789abcdef0
+
+I) Manage Security (Allow SSH/HTTP Quickly)
+
+Console
+
+Select instance → Security tab → click the security group.
+
+Edit inbound rules:
+
+SSH: TCP 22, Source = your IP (recommended).
+
+HTTP: TCP 80, Source = 0.0.0.0/0 (public web).
+
+Save rules.
+
+CLI
+
+# Example: allow SSH from your IP
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-0123456789abcdef0 \
+  --protocol tcp --port 22 --cidr 203.0.113.5/32
+
+J) Elastic IP (Keep a Stable Public IP)
+
+Console
+
+Left menu → Elastic IPs → Allocate Elastic IP.
+
+Select the EIP → Actions → Associate Elastic IP address → choose instance.
+
+Test SSH/RDP/HTTP using the EIP (won’t change on stop/start).
+
+CLI
+
+aws ec2 allocate-address --domain vpc
+aws ec2 associate-address --instance-id i-0123456789abcdef0 --allocation-id eipalloc-0123abcd4567efgh8
+
+K) Storage (See/Attach/Detach Volumes)
+
+Console
+
+Select instance → Storage tab → view root & data volumes.
+
+To add storage: Left menu Volumes → Create volume (same AZ) → Attach to instance.
+
+Log in and format/mount (Linux):
+
+lsblk
+sudo mkfs.ext4 /dev/xvdf
+sudo mkdir -p /data
+sudo mount /dev/xvdf /data
+
+
+Caution: Unmount inside the OS before detaching EBS.
+
+L) Status Checks & Recovery
+
+System status check: AWS infrastructure (power/network/host).
+
+Instance status check: Your OS/instance (kernel/network config).
+
+If failing:
+
+Actions → Monitor and troubleshoot → Reboot or Recover instance (if available).
+
+Check security groups, route tables, CPU credit balance (t-class), disk space, system logs.
+
+M) CLI Cheat Sheet (Common Ops)
+# List instances (id, state, name, type, IP)
+aws ec2 describe-instances \
+  --query "Reservations[].Instances[].{Id:InstanceId,State:State.Name,Name:Tags[?Key=='Name']|[0].Value,Type:InstanceType,PublicIp:PublicIpAddress}" \
+  --output table
+
+# Start/Stop/Reboot/Terminate
+aws ec2 start-instances --instance-ids i-.......
+aws ec2 stop-instances --instance-ids i-.......
+aws ec2 reboot-instances --instance-ids i-.......
+aws ec2 terminate-instances --instance-ids i-.......
+
+# Monitor metrics (enable detailed monitoring)
+aws ec2 monitor-instances --instance-ids i-.......
+aws ec2 unmonitor-instances --instance-ids i-.......
+
+# Change instance type (must be stopped)
+aws ec2 modify-instance-attribute --instance-id i-....... --instance-type "{\"Value\":\"t3.medium\"}"
+
+# Tag it
+aws ec2 create-tags --resources i-....... --tags Key=Name,Value=web-01
+
+# Get public IP quickly
+aws ec2 describe-instances --instance-ids i-....... --query "Reservations[].Instances[].PublicIpAddress" --output text
