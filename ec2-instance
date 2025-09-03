@@ -18,8 +18,8 @@ Prerequisites
 IAM permissions: ec2:Describe*, ec2:StartInstances, ec2:StopInstances, ec2:TerminateInstances, cloudwatch:* (as needed).
 
 Pick the correct Region (top-right of console).
-
-A) Open & Understand the Instances Page
+=======================================================================================================================================
+                                           # Open & Understand the Instances Page #
 
 Sign in to AWS Console → EC2.
 
@@ -40,8 +40,8 @@ Storage tab: Root & data volumes (EBS), device names.
 Status checks tab: System/Instance checks & history.
 
 Monitoring tab: CloudWatch metrics (CPU, network, disk).
-
-B) Start an Instance (Stopped → Running)
+=======================================================================================================================================
+											# Start an Instance (Stopped → Running) #
 
 Console
 
@@ -61,8 +61,8 @@ aws ec2 describe-instances --instance-ids i-0123456789abcdef0 --query "Reservati
 
 
 Note: Starting resumes billing for instance + attached EBS volumes.
-
-C) Stop an Instance (Running → Stopped)
+=======================================================================================================================================
+            								# Stop an Instance (Running → Stopped) #
 
 When to stop: Maintenance, change instance type/volume size, or to save instance-hours (EBS still bills).
 
@@ -87,8 +87,8 @@ Public IPv4 changes on next start (unless using an Elastic IP).
 Instance store (ephemeral) disks are wiped on stop. EBS persists.
 
 If Hibernate is enabled and supported, memory state is saved to EBS (extra charges/limits apply).
-
-D) Reboot an Instance
+=======================================================================================================================================
+                                         # Reboot an Instance  #
 
 Console: Select instance → Instance state → Reboot instance → Confirm.
 CLI:
@@ -97,8 +97,8 @@ aws ec2 reboot-instances --instance-ids i-0123456789abcdef0
 
 
 Reboot ≠ stop/start: public IP stays the same, EBS remains attached.
-
-E) Terminate an Instance (Permanently Delete)
+=======================================================================================================================================
+                                          # Terminate an Instance (Permanently Delete) #
 
 Before terminating
 
@@ -121,8 +121,8 @@ aws ec2 wait instance-terminated --instance-ids i-0123456789abcdef0
 
 
 Irreversible. Data on instance store is lost. EBS with “DeleteOnTermination=true” is also deleted.
-
-F) Connect to Your Instance
+=======================================================================================================================================
+                                           # Connect to Your Instance #
 Linux (SSH)
 
 Console (quick): Select instance → Connect → EC2 Instance Connect (works for Amazon Linux/Ubuntu with EIC enabled + IAM).
@@ -149,8 +149,8 @@ Console: Select instance → Connect → Session Manager → Connect.
 CLI (SSM)
 
 aws ssm start-session --target i-0123456789abcdef0
-
-G) View CPU & Create Alarms (Monitoring)
+=======================================================================================================================================
+                                           # View CPU & Create Alarms (Monitoring) #
 
 View CPU Utilization
 
@@ -185,8 +185,8 @@ aws cloudwatch put-metric-alarm \
   --evaluation-periods 5 \
   --alarm-actions arn:aws:sns:ap-south-1:123456789012:alerts \
   --unit Percent
-
-H) Change Instance Type (Scale Up/Down)
+=======================================================================================================================================
+                                         # Change Instance Type (Scale Up/Down) #
 
 Requires Stop (for EBS-backed instances).
 
@@ -206,8 +206,8 @@ aws ec2 stop-instances --instance-ids i-0123456789abcdef0
 aws ec2 wait instance-stopped --instance-ids i-0123456789abcdef0
 aws ec2 modify-instance-attribute --instance-id i-0123456789abcdef0 --instance-type "{\"Value\":\"t3.medium\"}"
 aws ec2 start-instances --instance-ids i-0123456789abcdef0
-
-I) Manage Security (Allow SSH/HTTP Quickly)
+=======================================================================================================================================
+                                           # Manage Security (Allow SSH/HTTP Quickly) #
 
 Console
 
@@ -227,8 +227,8 @@ CLI
 aws ec2 authorize-security-group-ingress \
   --group-id sg-0123456789abcdef0 \
   --protocol tcp --port 22 --cidr 203.0.113.5/32
-
-J) Elastic IP (Keep a Stable Public IP)
+=======================================================================================================================================
+                                            #  Elastic IP (Keep a Stable Public IP) #
 
 Console
 
@@ -242,8 +242,8 @@ CLI
 
 aws ec2 allocate-address --domain vpc
 aws ec2 associate-address --instance-id i-0123456789abcdef0 --allocation-id eipalloc-0123abcd4567efgh8
-
-K) Storage (See/Attach/Detach Volumes)
+=======================================================================================================================================
+                                             #    Storage (See/Attach/Detach Volumes) #
 
 Console
 
@@ -260,8 +260,8 @@ sudo mount /dev/xvdf /data
 
 
 Caution: Unmount inside the OS before detaching EBS.
-
-L) Status Checks & Recovery
+=======================================================================================================================================
+                                              #  Status Checks & Recovery #
 
 System status check: AWS infrastructure (power/network/host).
 
@@ -272,8 +272,8 @@ If failing:
 Actions → Monitor and troubleshoot → Reboot or Recover instance (if available).
 
 Check security groups, route tables, CPU credit balance (t-class), disk space, system logs.
-
-M) CLI Cheat Sheet (Common Ops)
+=======================================================================================================================================
+                                               #  CLI Cheat Sheet (Common Ops) #
 # List instances (id, state, name, type, IP)
 aws ec2 describe-instances \
   --query "Reservations[].Instances[].{Id:InstanceId,State:State.Name,Name:Tags[?Key=='Name']|[0].Value,Type:InstanceType,PublicIp:PublicIpAddress}" \
