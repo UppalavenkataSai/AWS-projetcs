@@ -1,0 +1,158 @@
+#######################################################################################################################################
+#                                           🚀 AWS Application Load Balancer (ALB) – Hands-On Project                                 #
+#######################################################################################################################################
+
+
+This project demonstrates how to set up a highly available web architecture using **AWS EC2** and **Application Load Balancer (ALB)**, 
+following security best practices.
+
+---
+
+***************************************************** 📌 Project Overview  *********************************************************
+
+- 🔸 Launch 2 EC2 instances in different Availability Zones
+- 🔸 Install Apache on both instances with unique responses
+- 🔸 Create a Target Group and register the instances
+- 🔸 Create an ALB to distribute HTTP traffic
+- 🔸 Configure Security Groups for secure traffic flow
+- 🔸 Test load balancing via browser or curl
+
+--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+## 🧱 Architecture Diagram
+
+      ┌──────────────┐
+      │    Users     │
+      └────┬─────────┘
+           │  HTTP
+           ▼
+ ┌────────────────────────┐
+ │  Application Load Balancer  │
+ └────┬──────────────┬────┘
+      │              │
+      ▼              ▼
+
+┌────────────┐ ┌────────────┐
+│ EC2 (1A) │ │ EC2 (1B) │
+│ Apache │ │ Apache │
+└────────────┘ └────────────┘
+
+
+
+
+=======================================================================================================================================
+
+## 🛠️ Step-by-Step Setup
+
+### ✅ Step 1: Launch EC2 Instances
+- Launch 2 EC2 Linux instances in different Availability Zones (e.g., `ap-south-1a`, `ap-south-1b`)
+- Use the same Security Group for both
+- Use Amazon Linux 2 AMI
+
+
+========================================================================================================================================
+
+### ✅ Step 2: Install Apache on Both EC2s
+
+SSH into each instance and run:
+
+```bash
+sudo yum install httpd -y
+sudo systemctl start httpd
+sudo systemctl enable httpd
+echo "Hello from EC2-1A" | sudo tee /var/www/html/index.html
+
+
+On the second instance, change the message:
+
+echo "Hello from EC2-1B" | sudo tee /var/www/html/index.html
+
+
+========================================================================================================================================
+
+✅ Step 3: Create Target Group
+
+Go to EC2 > Target Groups > Create Target Group
+
+Type: Instances
+
+Protocol: HTTP
+
+Port: 80
+
+Register both EC2 instances
+
+Confirm health checks pass (2/2)
+
+========================================================================================================================================
+
+
+✅ Step 4: Create Security Groups
+🔹 EC2 Security Group (e.g., ec2-sg)
+
+Allow:
+
+HTTP (80) from ALB Security Group only (best practice)
+
+SSH (22) from your IP
+
+🔹 ALB Security Group (e.g., alb-sg)
+
+Allow:
+
+HTTP (80) from 0.0.0.0/0
+
+========================================================================================================================================
+
+✅ Step 5: Create Application Load Balancer
+
+Go to EC2 > Load Balancers > Create Load Balancer > Application Load Balancer
+
+Scheme: Internet-facing
+
+Listeners: HTTP (port 80)
+
+Select 2 public subnets from different AZs
+
+Attach ALB Security Group
+
+Assign previously created Target Group
+
+========================================================================================================================================
+
+
+✅ Step 6: Test the ALB
+
+Copy the DNS Name of your ALB:
+
+http://<your-alb-dns>.ap-south-1.elb.amazonaws.com
+
+========================================================================================================================================
+
+🔁 Refresh multiple times — you should see:
+
+Hello from EC2-1A
+
+Hello from EC2-1B
+
+========================================================================================================================================
+
+🔐 Security Best Practices Followed
+
+ALB is public, EC2 is private (only reachable via ALB)
+
+Separate security groups for EC2 and ALB
+
+Health checks and access logs enabled
+
+========================================================================================================================================
+
+📈 What I Learned
+
+Working with EC2, Target Groups, and ALBs
+
+Setting up secure networking with security groups
+
+Understanding high availability and fault tolerance
+
+Load balancing real traffic across multiple zones
